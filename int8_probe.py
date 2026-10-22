@@ -50,6 +50,32 @@ def _load_layout_compiler():
 _compile_layout = _load_layout_compiler()
 
 
+def _load_tespeed():
+    """懒加载 TE-Speed-MOSS 节点（模型级步预测缓存加速，50步场景）。
+
+    返回 TESpeedMoss 节点类；插件未安装或加载失败时返回 None（探针不依赖它）。
+    """
+    try:
+        import importlib.util as _ilu
+        for _cn_dir in folder_paths.get_folder_paths("custom_nodes"):
+            _p = os.path.join(_cn_dir, "TE-Speed-MOSS", "__init__.py")
+            if not os.path.exists(_p):
+                continue
+            _spec = _ilu.spec_from_file_location("bsai_moss_tespeed_loader", _p)
+            _m = _ilu.module_from_spec(_spec)
+            sys.modules["bsai_moss_tespeed_loader"] = _m
+            _spec.loader.exec_module(_m)
+            return _m.NODE_CLASS_MAPPINGS.get("TESpeedMoss")
+        return None
+    except Exception as _e:
+        print(f"[BSAI-MOSS-ComfyUI/int8_probe] TE-Speed-MOSS unavailable: "
+              f"{type(_e).__name__}: {_e}")
+        return None
+
+
+_tespeed_cls = _load_tespeed()
+
+
 def _detect_quant(sd_state, label):
     """判定权重文件的量化类型，返回 (kind, detail)。"""
     detail = []
@@ -126,6 +152,24 @@ class BSAMOSSInt8Probe:
                 "scale_y": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 100.0, "step": 0.1}),
                 "shift_y": ("FLOAT", {"default": 0.0, "min": -256.0, "max": 256.0, "step": 0.1}),
                 "shift_t": ("FLOAT", {"default": 0.0, "min": -256.0, "max": 256.0, "step": 0.1}),
+                # ---- 内置 TE-Speed MOSS 50步加速（模型级步预测缓存）----
+                "te_speed_enabled": ("BOOLEAN", {"default": False, "label_on": "启用", "label_off": "关闭",
+                                                 "tooltip": "内置 TE-Speed MOSS 加速：对已加载 UNET 应用步预测缓存（模型包装，不改变原生注意力/采样器）。启用后无需在工作流中额外挂 TE-Speed MOSS 节点；50步场景收益最大。"}),
+                "te_speed_attention": (["default", "sageattn", "sdpa", "flashattn", "kitchen_int8", "kitchen_sol"],
+                                       {"default": "default",
+                                        "tooltip": "Attention backend。default 保持 ComfyUI 原生注意力（对 MOSS-Image 已是最快路径）；融合/稀疏后端更慢且改变输出。"}),
+                "te_speed_step_cache": (["te_predictor", "te_predictor 2"], {"default": "te_predictor 2",
+                                        "tooltip": "te_predictor: 线性两点预测；te_predictor 2: 对最近四次真实输出最小二乘拟合，适配 40+ 步计划（推荐）。"}),
+                "te_speed_reuse_threshold": ("FLOAT", {"default": 0.12, "min": 0.0, "max": 3.0, "step": 0.01,
+                                        "tooltip": "允许预测的相对 latent 变化阈值（0.12 匹配 MOSS euler 实测步间变化）。"}),
+                "te_speed_start_percent": ("FLOAT", {"default": 0.20, "min": 0.0, "max": 1.0, "step": 0.01}),
+                "te_speed_end_percent": ("FLOAT", {"default": 0.80, "min": 0.0, "max": 1.0, "step": 0.01}),
+                "te_speed_predictor_error_limit": ("FLOAT", {"default": 0.06, "min": 0.01, "max": 1.0, "step": 0.01,
+                                        "tooltip": "预测偏差触发冷却阈值（0.06 保守默认；0.08 为发布基准值；0.05 在 50 步保留更多细节）。"}),
+                "te_speed_uncond_cache": ("BOOLEAN", {"default": False, "label_on": "启用", "label_off": "关闭",
+                                        "tooltip": "对负向/无条件分支独立缓存（全步决策时）。关闭保持严格共享步决策与更高保真输出。"}),
+                "te_speed_verbose": ("BOOLEAN", {"default": False, "label_on": "启用", "label_off": "关闭",
+                                        "tooltip": "打印每个预测决策与跳过统计。"}),
             }
         }
 
@@ -137,7 +181,10 @@ class BSAMOSSInt8Probe:
     def run(self, unet, text_encoder, vae, lora_name, lora_strength, prompt, layout_json,
             steps, width, height, color_map=None, depth_map=None, control_strength=1.0,
             control_start_percent=0.0, control_end_percent=1.0, rope_enabled=False,
-            scale_x=1.0, shift_x=0.0, scale_y=1.0, shift_y=0.0, shift_t=0.0):
+            scale_x=1.0, shift_x=0.0, scale_y=1.0, shift_y=0.0, shift_t=0.0,
+            te_speed_enabled=False, te_speed_attention="default", te_speed_step_cache="te_predictor 2",
+            te_speed_reuse_threshold=0.12, te_speed_start_percent=0.20, te_speed_end_percent=0.80,
+            te_speed_predictor_error_limit=0.06, te_speed_uncond_cache=False, te_speed_verbose=False):
         lines = []
         torch.manual_seed(42)
         dev = mm.get_torch_device()
@@ -270,6 +317,36 @@ class BSAMOSSInt8Probe:
                 print("[PROBE] control maps applied (%s)" % kinds, flush=True)
             else:
                 lines.append("CONTROL skipped: 控制图编码失败")
+
+        # ---- 可选内置 TE-Speed MOSS 加速（模型级步预测缓存，50步场景）----
+        # 在 LoRA/ROPE/控制之后、采样之前包装模型；未安装插件时优雅跳过。
+        if te_speed_enabled:
+            if _tespeed_cls is None:
+                lines.append("TE-SPEED skipped: TE-Speed-MOSS 插件未安装（custom_nodes/TE-Speed-MOSS）")
+            else:
+                try:
+                    _node = _tespeed_cls()
+                    _kw = dict(
+                        model=patcher, attention=te_speed_attention,
+                        step_cache=te_speed_step_cache,
+                        reuse_threshold=te_speed_reuse_threshold,
+                        start_percent=te_speed_start_percent,
+                        end_percent=te_speed_end_percent,
+                        predictor_error_limit=te_speed_predictor_error_limit,
+                        uncond_cache=te_speed_uncond_cache,
+                        verbose=te_speed_verbose,
+                    )
+                    _res = getattr(_node, _tespeed_cls.FUNCTION)(**_kw)
+                    patcher = _res[0]
+                    _status = _res[1] if len(_res) > 1 else ""
+                    lines.append("TE-SPEED ON | cache=%s attn=%s | %s"
+                                 % (te_speed_step_cache, te_speed_attention, _status))
+                    print("[PROBE] TE-Speed applied: %s" % _status, flush=True)
+                except Exception as _e:
+                    lines.append("TE-SPEED failed: %s: %s" % (type(_e).__name__, _e))
+                    print("[PROBE] TE-Speed error: %s: %s" % (type(_e).__name__, _e), flush=True)
+        else:
+            lines.append("TE-SPEED off")
 
         # MOSS-Image 官方 latent 规格：128 通道 @ H//16（FLUX.2 式 128ch latent）
         latent = torch.randn(1, 128, height // 16, width // 16, device=dev, dtype=torch.bfloat16)

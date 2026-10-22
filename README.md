@@ -19,7 +19,7 @@ This plugin is **not a replacement** for the official `moss-image` ComfyUI plugi
 | `BSAI_MOSS_SamplerPresets` | Encodes the MOSS-Image technical-report sampling defaults (Euler / flow / 50 steps / CFG 3.0 / shift 5) as a single combo. Includes presets for the SFT-4steps-turbo LoRA, long-text rendering, and low-VRAM. |
 | `MOSSImageDMDApply` | Applies a DMD main-acceleration LoRA (e.g. `4steps-turbo`) to a `MODEL`, equivalent to `LoraLoaderModelOnly`. |
 | `MOSSImageDMDDataspaceSampler` | DMD few-step distilled sampler with built-in `time_embedding` + `dataspace` dual-LoRA application (Euler / simple / CFG 1.0, matching the V5 workflow 8-step DMD branch). Outputs `LATENT` with the MOSS-Image spec (128 channels @ H//16). |
-| `BSAMOSSInt8Probe` | Multi-quantisation end-to-end probe (INT8 / FP8 / NVFP4 / MXFP8): pick quantised UNET + TE + VAE, run through the official ComfyUI v0.42 load chain, output diagnostics string + IMAGE. |
+| `BSAMOSSInt8Probe` | Multi-quantisation end-to-end probe (INT8 / FP8 / NVFP4 / MXFP8): pick quantised UNET + TE + VAE, run through the official ComfyUI v0.42 load chain, output diagnostics string + IMAGE. **TE-Speed MOSS 50-step acceleration built in** (optional `te_speed_*` inputs; wraps the loaded model before sampling, no extra node needed; degrades gracefully when the TE-Speed-MOSS plugin is absent). |
 
 > The two DMD nodes were merged in from the former standalone `BSAI-MOSS-DMD`
 > plugin, and the probe node from `BSAI-MOSS-INT8-Probe`. Node class names are
@@ -98,7 +98,7 @@ outputs so they can be wired into `EmptyLatentImage` without manual entry.
 | `BSAI_MOSS_SamplerPresets` | 把技术报告推荐采样参数（Euler / flow / 50 步 / CFG 3.0 / shift 5）封装为单个下拉选项，另含 SFT-4steps-turbo LoRA、长文本渲染、低显存三套预设。 |
 | `MOSSImageDMDApply` | 对 `MODEL` 应用 DMD 主加速 LoRA（如 `4steps-turbo`），等价于 `LoraLoaderModelOnly`。 |
 | `MOSSImageDMDDataspaceSampler` | DMD 少步蒸馏采样器，内置 `time_embedding` + `dataspace` 双 LoRA 应用（euler / simple / CFG 1.0，与 V5 工作流 8 步 DMD 分支一致），输出符合 MOSS-Image 规格的 `LATENT`（128 通道 @ H//16）。 |
-| `BSAMOSSInt8Probe` | 多量化格式全链路探针（INT8 / FP8 / NVFP4 / MXFP8）：选择量化 UNET + TE + VAE，走官方 v0.42 加载链路，输出诊断字符串 + IMAGE。 |
+| `BSAMOSSInt8Probe` | 多量化格式全链路探针（INT8 / FP8 / NVFP4 / MXFP8）：选择量化 UNET + TE + VAE，走官方 v0.42 加载链路，输出诊断字符串 + IMAGE。**内置 TE-Speed MOSS 50步加速**（可选 `te_speed_*` 参数，采样前自动包裹模型，无需额外挂节点；插件缺失时优雅跳过）。 |
 
 > 两个 DMD 节点已从原独立插件 `BSAI-MOSS-DMD` 并入本插件，
 > 探针节点已从原独立插件 `BSAI-MOSS-INT8-Probe` 并入本插件。
