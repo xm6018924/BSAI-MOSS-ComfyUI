@@ -11,7 +11,7 @@ diffusion model (5B single-stream DiT, day-0 release 2026-10-19, technical repor
 [arXiv:2610.23374](https://arxiv.org/abs/2610.23374)).
 
 This plugin is **not a replacement** for the official `moss-image` ComfyUI plugin
-(which ships the Loaders). It layers four BSAI-native nodes on top:
+(which ships the Loaders). It layers five BSAI-native nodes on top:
 
 | Node | Purpose |
 |------|---------|
@@ -19,9 +19,11 @@ This plugin is **not a replacement** for the official `moss-image` ComfyUI plugi
 | `BSAI_MOSS_SamplerPresets` | Encodes the MOSS-Image technical-report sampling defaults (Euler / flow / 50 steps / CFG 3.0 / shift 5) as a single combo. Includes presets for the SFT-4steps-turbo LoRA, long-text rendering, and low-VRAM. |
 | `MOSSImageDMDApply` | Applies a DMD main-acceleration LoRA (e.g. `4steps-turbo`) to a `MODEL`, equivalent to `LoraLoaderModelOnly`. |
 | `MOSSImageDMDDataspaceSampler` | DMD few-step distilled sampler with built-in `time_embedding` + `dataspace` dual-LoRA application (Euler / simple / CFG 1.0, matching the V5 workflow 8-step DMD branch). Outputs `LATENT` with the MOSS-Image spec (128 channels @ H//16). |
+| `BSAMOSSInt8Probe` | Multi-quantisation end-to-end probe (INT8 / FP8 / NVFP4 / MXFP8): pick quantised UNET + TE + VAE, run through the official ComfyUI v0.42 load chain, output diagnostics string + IMAGE. |
 
 > The two DMD nodes were merged in from the former standalone `BSAI-MOSS-DMD`
-> plugin. Node class names are unchanged, so existing workflows load as-is.
+> plugin, and the probe node from `BSAI-MOSS-INT8-Probe`. Node class names are
+> unchanged, so existing workflows load as-is.
 
 ### Install
 
@@ -88,7 +90,7 @@ outputs so they can be wired into `EmptyLatentImage` without manual entry.
 [arXiv:2610.23374](https://arxiv.org/abs/2610.23374)）的 ComfyUI 配套插件。
 
 本插件**不是**官方 `moss-image` 插件（加载器由官方插件提供）的替代品，
-而是在其上叠加的四个 BSAI 自研节点：
+而是在其上叠加的五个 BSAI 自研节点：
 
 | 节点 | 作用 |
 |------|------|
@@ -96,9 +98,11 @@ outputs so they can be wired into `EmptyLatentImage` without manual entry.
 | `BSAI_MOSS_SamplerPresets` | 把技术报告推荐采样参数（Euler / flow / 50 步 / CFG 3.0 / shift 5）封装为单个下拉选项，另含 SFT-4steps-turbo LoRA、长文本渲染、低显存三套预设。 |
 | `MOSSImageDMDApply` | 对 `MODEL` 应用 DMD 主加速 LoRA（如 `4steps-turbo`），等价于 `LoraLoaderModelOnly`。 |
 | `MOSSImageDMDDataspaceSampler` | DMD 少步蒸馏采样器，内置 `time_embedding` + `dataspace` 双 LoRA 应用（euler / simple / CFG 1.0，与 V5 工作流 8 步 DMD 分支一致），输出符合 MOSS-Image 规格的 `LATENT`（128 通道 @ H//16）。 |
+| `BSAMOSSInt8Probe` | 多量化格式全链路探针（INT8 / FP8 / NVFP4 / MXFP8）：选择量化 UNET + TE + VAE，走官方 v0.42 加载链路，输出诊断字符串 + IMAGE。 |
 
-> 两个 DMD 节点已从原独立插件 `BSAI-MOSS-DMD` 并入本插件。
-> 节点类名保持不变，已有工作流可直接加载，无需修改。
+> 两个 DMD 节点已从原独立插件 `BSAI-MOSS-DMD` 并入本插件，
+> 探针节点已从原独立插件 `BSAI-MOSS-INT8-Probe` 并入本插件。
+> 节点类名均保持不变，已有工作流可直接加载，无需修改。
 
 ### 安装
 
