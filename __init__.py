@@ -36,8 +36,9 @@ from .layout_prompt import NODE_CLASS_MAPPINGS as _A, NODE_DISPLAY_NAME_MAPPINGS
 from .sampler_presets import NODE_CLASS_MAPPINGS as _B, NODE_DISPLAY_NAME_MAPPINGS as _BD
 from .dmd_nodes import NODE_CLASS_MAPPINGS as _C, NODE_DISPLAY_NAME_MAPPINGS as _CD
 from .int8_probe import NODE_CLASS_MAPPINGS as _P, NODE_DISPLAY_NAME_MAPPINGS as _PD
+from .bsai_moss_edit import NODE_CLASS_MAPPINGS as _E, NODE_DISPLAY_NAME_MAPPINGS as _ED
 
-NODE_CLASS_MAPPINGS = {**_A, **_B, **_C, **_P}
-NODE_DISPLAY_NAME_MAPPINGS = {**_AD, **_BD, **_CD, **_PD}
+NODE_CLASS_MAPPINGS = {**_A, **_B, **_C, **_P, **_E}
+NODE_DISPLAY_NAME_MAPPINGS = {**_AD, **_BD, **_CD, **_PD, **_ED}
 
 __all__ = ["NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS"]

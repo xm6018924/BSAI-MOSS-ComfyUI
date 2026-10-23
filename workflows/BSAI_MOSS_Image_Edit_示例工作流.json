@@ -1,0 +1,375 @@
+{
+  "last_node_id": 10,
+  "last_link_id": 12,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "UnetLoader",
+      "pos": [40, 100],
+      "size": [240, 46],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [1],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "UnetLoader"
+      },
+      "widgets_values": [
+        "MOSS image/moss_image_sft_int8_convrot.safetensors"
+      ],
+      "title": "MOSS-Image UNET"
+    },
+    {
+      "id": 2,
+      "type": "CLIPLoader",
+      "pos": [40, 190],
+      "size": [240, 46],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [2],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CLIPLoader"
+      },
+      "widgets_values": [
+        "qwen3.5_9b_int8_convrot.safetensors",
+        "moss_image"
+      ],
+      "title": "MOSS TE (moss_image)"
+    },
+    {
+      "id": 3,
+      "type": "VAELoader",
+      "pos": [40, 280],
+      "size": [240, 46],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "links": [3, 11],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VAELoader"
+      },
+      "widgets_values": [
+        "flux2-vae.safetensors"
+      ],
+      "title": "VAE (flux2)"
+    },
+    {
+      "id": 4,
+      "type": "LoadImage",
+      "pos": [40, 370],
+      "size": [280, 314],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [4],
+          "slot_index": 0
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadImage"
+      },
+      "widgets_values": [
+        "000011Apt.jpg",
+        "image"
+      ],
+      "title": "参考图 1（被编辑对象）"
+    },
+    {
+      "id": 5,
+      "type": "LoadImage",
+      "pos": [40, 700],
+      "size": [280, 314],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [5],
+          "slot_index": 0
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadImage"
+      },
+      "widgets_values": [
+        "7.png",
+        "image"
+      ],
+      "title": "参考图 2（风格/内容参考，可换图）"
+    },
+    {
+      "id": 6,
+      "type": "BSAIMOSSImageEditEncode",
+      "pos": [420, 100],
+      "size": [360, 380],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 1
+        },
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 2
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 3
+        },
+        {
+          "name": "reference_1",
+          "type": "IMAGE",
+          "link": 4
+        },
+        {
+          "name": "reference_2",
+          "type": "IMAGE",
+          "link": 5
+        }
+      ],
+      "outputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "links": [6],
+          "slot_index": 0
+        },
+        {
+          "name": "positive",
+          "type": "CONDITIONING",
+          "links": [7],
+          "slot_index": 1
+        },
+        {
+          "name": "negative",
+          "type": "CONDITIONING",
+          "links": [8],
+          "slot_index": 2
+        },
+        {
+          "name": "note",
+          "type": "STRING",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "BSAIMOSSImageEditEncode"
+      },
+      "widgets_values": [
+        "turn the wooden floor into polished white marble, add a large window on the left wall, keep the furniture and the warm lamp light, photorealistic, 8k",
+        "blurry, low quality, deformed, watermark, oversaturated",
+        "ai-toolkit",
+        "None",
+        1.0,
+        false,
+        1.0,
+        0.0,
+        1.0,
+        0.0,
+        1.0,
+        0.0
+      ],
+      "title": "BSAI MOSS-Image Edit\n（编辑 LoRA + 参考图 + 正/负条件）"
+    },
+    {
+      "id": 7,
+      "type": "EmptyFlux2LatentImage",
+      "pos": [420, 520],
+      "size": [240, 82],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [9],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "EmptyFlux2LatentImage"
+      },
+      "widgets_values": [
+        1024,
+        768,
+        1
+      ]
+    },
+    {
+      "id": 8,
+      "type": "KSampler",
+      "pos": [850, 100],
+      "size": [240, 262],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 6
+        },
+        {
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 7
+        },
+        {
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 8
+        },
+        {
+          "name": "latent_image",
+          "type": "LATENT",
+          "link": 9
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [10],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "KSampler"
+      },
+      "widgets_values": [
+        351889551841791,
+        "randomize",
+        25,
+        3.0,
+        "euler",
+        "flow",
+        1.0
+      ],
+      "title": "采样（euler / flow / 25 步 / CFG 3.0）"
+    },
+    {
+      "id": 9,
+      "type": "VAEDecode",
+      "pos": [1150, 100],
+      "size": [210, 46],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "samples",
+          "type": "LATENT",
+          "link": 10
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 11
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [12],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VAEDecode"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 10,
+      "type": "SaveImage",
+      "pos": [1410, 100],
+      "size": [300, 270],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 12
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "Node name for S&R": "SaveImage"
+      },
+      "widgets_values": [
+        "BSAI_MOSS_Image_Edit"
+      ]
+    }
+  ],
+  "links": [
+    [1, 1, 0, 6, 0, "MODEL"],
+    [2, 2, 0, 6, 1, "CLIP"],
+    [3, 3, 0, 6, 2, "VAE"],
+    [4, 4, 0, 6, 3, "IMAGE"],
+    [5, 5, 0, 6, 4, "IMAGE"],
+    [6, 6, 0, 8, 0, "MODEL"],
+    [7, 6, 1, 8, 1, "CONDITIONING"],
+    [8, 6, 2, 8, 2, "CONDITIONING"],
+    [9, 7, 0, 8, 3, "LATENT"],
+    [10, 8, 0, 9, 0, "LATENT"],
+    [11, 3, 0, 9, 1, "VAE"],
+    [12, 9, 0, 10, 0, "IMAGE"]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {},
+  "version": 0.4
+}
